@@ -1,6 +1,6 @@
-/* Copyright (c) 1996-2020 The OPC Foundation. All rights reserved.
+/* Copyright (c) 1996-2022 The OPC Foundation. All rights reserved.
    The source code in this file is covered under a dual-license scenario:
-     - RCL: for OPC Foundation members in good-standing
+     - RCL: for OPC Foundation Corporate Members in good-standing
      - GPL V2: everybody else
    RCL license terms accompanied with this source code. See http://opcfoundation.org/License/RCL/1.00/
    GNU General Public License as published by the Free Software Foundation;
@@ -26,7 +26,7 @@ namespace Opc.Ua
         /// <summary>
         /// Creates a decoder that reads from a memory buffer.
         /// </summary>
-        public BinaryDecoder(byte[] buffer, ServiceMessageContext context)
+        public BinaryDecoder(byte[] buffer, IServiceMessageContext context)
         :
             this(buffer, 0, buffer.Length, context)
         {
@@ -35,7 +35,7 @@ namespace Opc.Ua
         /// <summary>
         /// Creates a decoder that reads from a memory buffer.
         /// </summary>
-        public BinaryDecoder(byte[] buffer, int start, int count, ServiceMessageContext context)
+        public BinaryDecoder(byte[] buffer, int start, int count, IServiceMessageContext context)
         {
             m_istrm = new MemoryStream(buffer, start, count, false);
             m_reader = new BinaryReader(m_istrm);
@@ -46,7 +46,7 @@ namespace Opc.Ua
         /// <summary>
         /// Creates a decoder that reads from a stream.
         /// </summary>
-        public BinaryDecoder(Stream stream, ServiceMessageContext context)
+        public BinaryDecoder(Stream stream, IServiceMessageContext context)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
 
@@ -130,7 +130,7 @@ namespace Opc.Ua
         /// <summary>
         /// Decodes a message from a stream.
         /// </summary>
-        public static IEncodeable DecodeMessage(Stream stream, System.Type expectedType, ServiceMessageContext context)
+        public static IEncodeable DecodeMessage(Stream stream, System.Type expectedType, IServiceMessageContext context)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
             if (context == null) throw new ArgumentNullException(nameof(context));
@@ -150,7 +150,7 @@ namespace Opc.Ua
         /// <summary>
         /// Decodes a session-less message from a buffer.
         /// </summary>
-        public static IEncodeable DecodeSessionLessMessage(byte[] buffer, ServiceMessageContext context)
+        public static IEncodeable DecodeSessionLessMessage(byte[] buffer, IServiceMessageContext context)
         {
             if (buffer == null) throw new ArgumentNullException(nameof(buffer));
             if (context == null) throw new ArgumentNullException(nameof(context));
@@ -189,7 +189,7 @@ namespace Opc.Ua
         /// <summary>
         /// Decodes a message from a buffer.
         /// </summary>
-        public static IEncodeable DecodeMessage(byte[] buffer, System.Type expectedType, ServiceMessageContext context)
+        public static IEncodeable DecodeMessage(byte[] buffer, System.Type expectedType, IServiceMessageContext context)
         {
             if (buffer == null) throw new ArgumentNullException(nameof(buffer));
             if (context == null) throw new ArgumentNullException(nameof(context));
@@ -274,7 +274,7 @@ namespace Opc.Ua
         /// <summary>
         /// The message context associated with the decoder.
         /// </summary>
-        public ServiceMessageContext Context => m_context;
+        public IServiceMessageContext Context => m_context;
 
         /// <summary>
         /// Pushes a namespace onto the namespace stack.
@@ -582,7 +582,6 @@ namespace Opc.Ua
             }
 
             return value;
-
         }
 
         /// <summary>
@@ -1516,12 +1515,21 @@ namespace Opc.Ua
                         if (dimensions[ii] <= 0)
                         {
                             /* The number of values is 0 if one or more dimension is less than or equal to 0.*/
-                            Utils.Trace("ReadArray read dimensions[{0}] = {1}. Matrix will have 0 elements.", ii, dimensions[ii]);
+                            Utils.LogTrace("ReadArray read dimensions[{0}] = {1}. Matrix will have 0 elements.", ii, dimensions[ii]);
                             dimensions[ii] = 0;
                             length = 0;
                             break;
                         }
                         length *= dimensions[ii];
+                    }
+                    if (length > m_context.MaxArrayLength)
+                    {
+                        throw ServiceResultException.Create(
+                            StatusCodes.BadEncodingLimitsExceeded,
+                            "Maximum array length of {0} was exceeded while summing up to {1} from the array dimensions",
+                            m_context.MaxArrayLength,
+                            length
+                            );
                     }
                     // read the elements
                     Array elements = null;
@@ -1781,7 +1789,7 @@ namespace Opc.Ua
                     }
                     catch (Exception ex)
                     {
-                        Utils.Trace(ex, "Error reading array of XmlElement.");
+                        Utils.LogError(ex, "Error reading array of XmlElement.");
                     }
 
                     break;
@@ -2010,7 +2018,7 @@ namespace Opc.Ua
 
             if (!NodeId.IsNull(typeId) && NodeId.IsNull(extension.TypeId))
             {
-                Utils.Trace(
+                Utils.LogWarning(
                     "Cannot de-serialized extension objects if the NamespaceUri is not in the NamespaceTable: Type = {0}",
                     typeId);
             }
@@ -2049,7 +2057,7 @@ namespace Opc.Ua
                     }
                     catch (Exception e)
                     {
-                        Utils.Trace("Could not decode known type {0}. Error={1}, Value={2}", systemType.FullName, e.Message, element.OuterXml);
+                        Utils.LogError("Could not decode known type {0}. Error={1}, Value={2}", systemType.FullName, e.Message, element.OuterXml);
                     }
                 }
 
@@ -2152,7 +2160,7 @@ namespace Opc.Ua
             if ((encodingByte & (byte)VariantArrayEncodingBits.Array) != 0)
             {
                 // read the array length.
-                int length = m_reader.ReadInt32();
+                int length = ReadArrayLength();
 
                 if (length < 0)
                 {
@@ -2206,11 +2214,10 @@ namespace Opc.Ua
                     }
                     else
                     {
-                        value = new Variant(array);
+                        value = new Variant(array, new TypeInfo(builtInType, 1));
                     }
                 }
             }
-
             else
             {
                 switch ((BuiltInType)encodingByte)
@@ -2320,7 +2327,7 @@ namespace Opc.Ua
                         }
                         catch (Exception ex)
                         {
-                            Utils.Trace(ex, "Error reading xml element for variant.");
+                            Utils.LogError(ex, "Error reading xml element for variant.");
                             value.Set(StatusCodes.BadEncodingError);
                         }
                         break;
@@ -2384,7 +2391,7 @@ namespace Opc.Ua
         #region Private Fields
         private Stream m_istrm;
         private BinaryReader m_reader;
-        private ServiceMessageContext m_context;
+        private IServiceMessageContext m_context;
         private ushort[] m_namespaceMappings;
         private ushort[] m_serverMappings;
         private uint m_nestingLevel;

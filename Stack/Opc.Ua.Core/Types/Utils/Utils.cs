@@ -1,6 +1,6 @@
-/* Copyright (c) 1996-2020 The OPC Foundation. All rights reserved.
+/* Copyright (c) 1996-2022 The OPC Foundation. All rights reserved.
    The source code in this file is covered under a dual-license scenario:
-     - RCL: for OPC Foundation members in good-standing
+     - RCL: for OPC Foundation Corporate Members in good-standing
      - GPL V2: everybody else
    RCL license terms accompanied with this source code. See http://opcfoundation.org/License/RCL/1.00/
    GNU General Public License as published by the Free Software Foundation;
@@ -32,46 +32,46 @@ namespace Opc.Ua
     /// <summary>
     /// Defines various static utility functions.
     /// </summary>
-    public static class Utils
+    public static partial class Utils
     {
         #region Public Constants
         /// <summary>
-        /// The URI scheme for the HTTP protocol. 
+        /// The URI scheme for the HTTP protocol.
         /// </summary>
         public const string UriSchemeHttp = "http";
 
         /// <summary>
-        /// The URI scheme for the HTTPS protocol. 
+        /// The URI scheme for the HTTPS protocol.
         /// </summary>
         public const string UriSchemeHttps = "https";
 
         /// <summary>
-        /// The URI scheme for the UA TCP protocol. 
+        /// The URI scheme for the UA TCP protocol.
         /// </summary>
         public const string UriSchemeOpcTcp = "opc.tcp";
 
         /// <summary>
-        /// The URI scheme for the UA TCP protocol over Secure WebSockets. 
+        /// The URI scheme for the UA TCP protocol over Secure WebSockets.
         /// </summary>
         public const string UriSchemeOpcWss = "opc.wss";
 
         /// <summary>
-        /// The URI scheme for the UDP protocol. 
+        /// The URI scheme for the UDP protocol.
         /// </summary>
         public const string UriSchemeOpcUdp = "opc.udp";
 
         /// <summary>
-        /// The URI scheme for the MQTT protocol. 
+        /// The URI scheme for the MQTT protocol.
         /// </summary>
         public const string UriSchemeMqtt = "mqtt";
 
         /// <summary>
-        /// The URI scheme for the MQTTS protocol. 
+        /// The URI scheme for the MQTTS protocol.
         /// </summary>
         public const string UriSchemeMqtts = "mqtts";
 
         /// <summary>
-        /// The URI schemes which are supported in the core server. 
+        /// The URI schemes which are supported in the core server.
         /// </summary>
         public static readonly string[] DefaultUriSchemes = new string[]
         {
@@ -97,7 +97,6 @@ namespace Opc.Ua
         /// <summary>
         /// The urls of the discovery servers on a node.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2105:ArrayFieldsShouldNotBeReadOnly")]
         public static readonly string[] DiscoveryUrls = new string[]
         {
             "opc.tcp://{0}:4840",
@@ -114,12 +113,16 @@ namespace Opc.Ua
         /// <summary>
         /// The path to the default certificate store.
         /// </summary>
-        public const string DefaultStorePath = "%CommonApplicationData%/OPC Foundation/CertificateStores/MachineDefault";
+#if NETFRAMEWORK
+        public static readonly string DefaultStorePath = Path.Combine("%CommonApplicationData%", "OPC Foundation", "pki", "own");
+#else
+        public static readonly string DefaultStorePath = Path.Combine("%LocalApplicationData%", "OPC Foundation", "pki", "own");
+#endif
 
         /// <summary>
         /// The default LocalFolder.
         /// </summary>
-        public static string DefaultLocalFolder = Directory.GetCurrentDirectory();
+        public static readonly string DefaultLocalFolder = Directory.GetCurrentDirectory();
 
         /// <summary>
         /// The full name of the Opc.Ua.Core assembly.
@@ -134,7 +137,7 @@ namespace Opc.Ua
         /// <summary>
         /// List of known default bindings hosted in other assemblies.
         /// </summary>
-        public static ReadOnlyDictionary<string, string> DefaultBindings = new ReadOnlyDictionary<string, string>(
+        public static readonly ReadOnlyDictionary<string, string> DefaultBindings = new ReadOnlyDictionary<string, string>(
             new Dictionary<string, string>() {
                 { Utils.UriSchemeHttps, "Opc.Ua.Bindings.Https"}
             });
@@ -150,13 +153,11 @@ namespace Opc.Ua
 #endif
 
         private static string s_traceFileName = string.Empty;
-        private static long s_BaseLineTicks = DateTime.UtcNow.Ticks;
         private static object s_traceFileLock = new object();
 
         /// <summary>
         /// The possible trace output mechanisms.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")]
         public enum TraceOutput
         {
             /// <summary>
@@ -178,7 +179,6 @@ namespace Opc.Ua
         /// <summary>
         /// The masks used to filter trace messages.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")]
         public static class TraceMasks
         {
             /// <summary>
@@ -239,11 +239,11 @@ namespace Opc.Ua
             /// <summary>
             /// Output all messages.
             /// </summary>
-            public const int All = 0x7FFFFFFF;
+            public const int All = 0x3FF;
         }
 
         /// <summary>
-        /// Sets the output for tracing (thead safe).
+        /// Sets the output for tracing (thread safe).
         /// </summary>
         public static void SetTraceOutput(TraceOutput output)
         {
@@ -262,7 +262,7 @@ namespace Opc.Ua
         }
 
         /// <summary>
-        /// Sets the mask for tracing (thead safe).
+        /// Sets the mask for tracing (thread safe).
         /// </summary>
         public static void SetTraceMask(int masks)
         {
@@ -303,13 +303,21 @@ namespace Opc.Ua
                 }
             }
 
+            TraceWriteLine(output);
+        }
+
+        /// <summary>
+        /// Writes a trace statement.
+        /// </summary>
+        private static void TraceWriteLine(string output)
+        {
             // write to the log file.
             lock (s_traceFileLock)
             {
                 // write to debug trace listeners.
                 if (s_traceOutput == (int)TraceOutput.DebugAndFile)
                 {
-                    System.Diagnostics.Debug.WriteLine(output);
+                    Debug.WriteLine(output);
                 }
 
                 string traceFileName = s_traceFileName;
@@ -389,7 +397,7 @@ namespace Opc.Ua
                 }
                 catch (Exception e)
                 {
-                    TraceWriteLine(e.Message, null);
+                    TraceWriteLine(e.Message);
                 }
             }
         }
@@ -397,9 +405,17 @@ namespace Opc.Ua
         /// <summary>
         /// Writes an informational message to the trace log.
         /// </summary>
+        public static void Trace(string message)
+        {
+            LogInfo(message);
+        }
+
+        /// <summary>
+        /// Writes an informational message to the trace log.
+        /// </summary>
         public static void Trace(string format, params object[] args)
         {
-            Trace((int)TraceMasks.Information, format, false, args);
+            LogInfo(format, args);
         }
 
         /// <summary>
@@ -408,7 +424,15 @@ namespace Opc.Ua
         [Conditional("DEBUG")]
         public static void TraceDebug(string format, params object[] args)
         {
-            Trace((int)TraceMasks.OperationDetail, format, false, args);
+            LogDebug(format, args);
+        }
+
+        /// <summary>
+        /// Writes an exception/error message to the trace log.
+        /// </summary>
+        public static void Trace(Exception e, string message)
+        {
+            LogError(e, message);
         }
 
         /// <summary>
@@ -416,13 +440,13 @@ namespace Opc.Ua
         /// </summary>
         public static void Trace(Exception e, string format, params object[] args)
         {
-            Trace(e, format, false, args);
+            LogError(e, format, args);
         }
 
         /// <summary>
-        /// Writes an exception/error message to the trace log.
+        /// Create an exception/error message for a log.
         /// </summary>
-        public static void Trace(Exception e, string format, bool handled, params object[] args)
+        internal static StringBuilder TraceExceptionMessage(Exception e, string format, params object[] args)
         {
             StringBuilder message = new StringBuilder();
 
@@ -471,6 +495,16 @@ namespace Opc.Ua
                 }
             }
 
+            return message;
+        }
+
+        /// <summary>
+        /// Writes an exception/error message to the trace log.
+        /// </summary>
+        public static void Trace(Exception e, string format, bool handled, params object[] args)
+        {
+            StringBuilder message = TraceExceptionMessage(e, format, args);
+
             // trace message.
             Trace(e, (int)TraceMasks.Error, message.ToString(), handled, null);
         }
@@ -480,7 +514,20 @@ namespace Opc.Ua
         /// </summary>
         public static void Trace(int traceMask, string format, params object[] args)
         {
-            Trace(traceMask, format, false, args);
+            const int InformationMask = (TraceMasks.Information | TraceMasks.StartStop | TraceMasks.Security);
+            const int ErrorMask = (TraceMasks.Error | TraceMasks.StackTrace);
+            if ((traceMask & ErrorMask) != 0)
+            {
+                LogError(traceMask, format, args);
+            }
+            else if ((traceMask & InformationMask) != 0)
+            {
+                LogInfo(traceMask, format, args);
+            }
+            else
+            {
+                LogTrace(traceMask, format, args);
+            }
         }
 
         /// <summary>
@@ -489,6 +536,46 @@ namespace Opc.Ua
         public static void Trace(int traceMask, string format, bool handled, params object[] args)
         {
             Trace(null, traceMask, format, handled, args);
+        }
+
+        /// <summary>
+        /// Writes a message to the trace log.
+        /// </summary>
+        public static void Trace<TState>(TState state, Exception exception, int traceMask, Func<TState, Exception, string> formatter)
+        {
+            // do nothing if mask not enabled.
+            bool tracingEnabled = Tracing.IsEnabled();
+            bool traceMaskEnabled = (s_traceMasks & traceMask) != 0;
+            if (!traceMaskEnabled && !tracingEnabled)
+            {
+                return;
+            }
+
+            StringBuilder message = new StringBuilder();
+            try
+            {
+                // append process and timestamp.
+                message.AppendFormat(CultureInfo.InvariantCulture, "{0:d} {0:HH:mm:ss.fff} ", DateTime.UtcNow.ToLocalTime());
+                message.Append(formatter(state, exception));
+                if (exception != null)
+                {
+                    message.Append(TraceExceptionMessage(exception, String.Empty, null));
+                }
+            }
+            catch (Exception)
+            {
+                return;
+            }
+
+            var output = message.ToString();
+            if (tracingEnabled)
+            {
+                Tracing.Instance.RaiseTraceEvent(new TraceEventArgs(traceMask, output, string.Empty, exception, Array.Empty<object>()));
+            }
+            if (traceMaskEnabled)
+            {
+                TraceWriteLine(output);
+            }
         }
 
         /// <summary>
@@ -510,7 +597,7 @@ namespace Opc.Ua
             StringBuilder message = new StringBuilder();
 
             // append process and timestamp.
-            message.AppendFormat("{0:d} {0:HH:mm:ss.fff} ", DateTime.UtcNow.ToLocalTime());
+            message.AppendFormat(CultureInfo.InvariantCulture, "{0:d} {0:HH:mm:ss.fff} ", DateTime.UtcNow.ToLocalTime());
 
             // format message.
             if (args != null && args.Length > 0)
@@ -529,7 +616,7 @@ namespace Opc.Ua
                 message.Append(format);
             }
 
-            TraceWriteLine(message.ToString(), null);
+            TraceWriteLine(message.ToString());
         }
         #endregion
 
@@ -540,7 +627,7 @@ namespace Opc.Ua
         public static bool IsPathRooted(string path)
         {
             // allow for local file locations
-            return Path.IsPathRooted(path) || path[0] == '.';
+            return Path.IsPathRooted(path) || (path.Length >= 2 && path[0] == '.' && path[1] != '.');
         }
 
         /// <summary>
@@ -561,7 +648,6 @@ namespace Opc.Ua
         /// </summary>
         public static string ReplaceSpecialFolderNames(string input)
         {
-
             // nothing to do for nulls.
             if (String.IsNullOrEmpty(input))
             {
@@ -785,7 +871,7 @@ namespace Opc.Ua
             }
             catch (Exception e)
             {
-                Utils.Trace(e, "Could not create file: {0}", filePath);
+                Utils.LogError(e, "Could not create file: {0}", filePath);
 
                 if (throwOnError)
                 {
@@ -950,7 +1036,7 @@ namespace Opc.Ua
 #if DEBUG
             catch (Exception e)
             {
-                Utils.Trace(e, "Error disposing object: {0}", disposable.GetType().Name);
+                Utils.LogError(e, "Error disposing object: {0}", disposable.GetType().Name);
             }
 #else
             catch (Exception) {;}
@@ -1020,13 +1106,13 @@ namespace Opc.Ua
             return (int)timeSpan.TotalMilliseconds;
         }
 
-        /// <inheritdoc cref="Dns.GetHostAddressesAsync"/>
+        /// <inheritdoc cref="Dns.GetHostAddressesAsync(string)"/>
         public static Task<IPAddress[]> GetHostAddressesAsync(string hostNameOrAddress)
         {
             return Dns.GetHostAddressesAsync(hostNameOrAddress);
         }
 
-        /// <inheritdoc cref="Dns.GetHostAddresses"/>
+        /// <inheritdoc cref="Dns.GetHostAddresses(string)"/>
         public static IPAddress[] GetHostAddresses(string hostNameOrAddress)
         {
             return Dns.GetHostAddresses(hostNameOrAddress);
@@ -1075,11 +1161,9 @@ namespace Opc.Ua
             }
         }
 
-
         /// <summary>
         /// Replaces the localhost domain with the current host name.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "RCS1197:Optimize StringBuilder.Append/AppendLine call.")]
         public static string ReplaceLocalhost(string uri, string hostname = null)
         {
             // ignore nulls.
@@ -1104,18 +1188,22 @@ namespace Opc.Ua
             }
 
             // construct new uri.
-            StringBuilder buffer = new StringBuilder();
+            var buffer = new StringBuilder();
+#if NET5_0_OR_GREATER || NETSTANDARD2_1
+            buffer.Append(uri.AsSpan(0, index))
+                .Append(hostname ?? GetHostName())
+                .Append(uri.AsSpan(index + localhost.Length));
+#else
             buffer.Append(uri.Substring(0, index))
-                .Append(hostname == null ? GetHostName() : hostname)
+                .Append(hostname ?? GetHostName())
                 .Append(uri.Substring(index + localhost.Length));
-
+#endif
             return buffer.ToString();
         }
 
         /// <summary>
         /// Replaces the cert subject name DC=localhost with the current host name.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "RCS1197:Optimize StringBuilder.Append/AppendLine call.")]
         public static string ReplaceDCLocalhost(string subjectName, string hostname = null)
         {
             // ignore nulls.
@@ -1140,12 +1228,16 @@ namespace Opc.Ua
             }
 
             // construct new uri.
-            StringBuilder buffer = new StringBuilder();
-
+            var buffer = new StringBuilder();
+#if NET5_0_OR_GREATER || NETSTANDARD2_1
+            buffer.Append(subjectName.AsSpan(0, index + 3))
+                .Append(hostname ?? GetHostName())
+                .Append(subjectName.AsSpan(index + dclocalhost.Length));
+#else
             buffer.Append(subjectName.Substring(0, index + 3))
-                .Append(hostname == null ? GetHostName() : hostname)
+                .Append(hostname ?? GetHostName())
                 .Append(subjectName.Substring(index + dclocalhost.Length));
-
+#endif
             return buffer.ToString();
         }
 
@@ -1278,6 +1370,26 @@ namespace Opc.Ua
         }
 
         /// <summary>
+        /// Sets the identifier to a lower limit if smaller. Thread safe.
+        /// </summary>
+        /// <returns>Returns the new value.</returns>
+        public static uint LowerLimitIdentifier(ref long identifier, uint lowerLimit)
+        {
+            long value;
+            long exchangedValue;
+            do
+            {
+                value = System.Threading.Interlocked.Read(ref identifier);
+                exchangedValue = value;
+                if (value < lowerLimit)
+                {
+                    exchangedValue = System.Threading.Interlocked.CompareExchange(ref identifier, lowerLimit, value);
+                }
+            } while (exchangedValue != value);
+            return (uint)System.Threading.Interlocked.Read(ref identifier);
+        }
+
+        /// <summary>
         /// Increments a identifier (wraps around if max exceeded).
         /// </summary>
         public static uint IncrementIdentifier(ref long identifier)
@@ -1322,11 +1434,11 @@ namespace Opc.Ua
         }
 
         /// <summary>
-        /// Converts a multidimension array to a flat array. 
+        /// Converts a multidimension array to a flat array.
         /// </summary>
         /// <remarks>
         /// The higher rank dimensions are written first.
-        /// e.g. a array with dimensions [2,2,2] is written in this order: 
+        /// e.g. a array with dimensions [2,2,2] is written in this order:
         /// [0,0,0], [0,0,1], [0,1,0], [0,1,1], [1,0,0], [1,0,1], [1,1,0], [1,1,1]
         /// </remarks>
         public static Array FlattenArray(Array array)
@@ -1467,11 +1579,9 @@ namespace Opc.Ua
             return String.Format(CultureInfo.InvariantCulture, text, args);
         }
 
-
         /// <summary>
         /// Checks if a string is a valid locale identifier.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "RCS1075:Avoid empty catch clause that catches System.Exception.")]
         public static bool IsValidLocaleId(string localeId)
         {
             if (String.IsNullOrEmpty(localeId))
@@ -2002,6 +2112,49 @@ namespace Opc.Ua
         }
 
         /// <summary>
+        /// Checks if two identities are equal.
+        /// </summary>
+        public static bool IsEqualUserIdentity(UserIdentityToken identity1, UserIdentityToken identity2)
+        {
+            // check for reference equality.
+            if (Object.ReferenceEquals(identity1, identity2))
+            {
+                return true;
+            }
+
+            if (identity1 == null || identity2 == null)
+            {
+                return false;
+            }
+
+            if (identity1 is AnonymousIdentityToken &&
+                identity2 is AnonymousIdentityToken)
+            {
+                return true;
+            }
+
+            if (identity1 is UserNameIdentityToken userName1 &&
+                identity2 is UserNameIdentityToken userName2)
+            {
+                return string.Equals(userName1.UserName, userName2.UserName, StringComparison.Ordinal);
+            }
+
+            if (identity1 is X509IdentityToken x509Token1 &&
+                identity2 is X509IdentityToken x509Token2)
+            {
+                return Utils.IsEqual(x509Token1.CertificateData, x509Token2.CertificateData);
+            }
+
+            if (identity1 is IssuedIdentityToken issuedToken1 &&
+                identity2 is IssuedIdentityToken issuedToken2)
+            {
+                return Utils.IsEqual(issuedToken1.DecryptedTokenData, issuedToken2.DecryptedTokenData);
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Checks if two values are equal.
         /// </summary>
         public static bool IsEqual(object value1, object value2)
@@ -2036,9 +2189,9 @@ namespace Opc.Ua
             }
 
             // check for DateTime objects
-            if (value1 is DateTime)
+            if (value1 is DateTime time)
             {
-                return (Utils.ToOpcUaUniversalTime((DateTime)value1).CompareTo(Utils.ToOpcUaUniversalTime((DateTime)value2))) == 0;
+                return (Utils.ToOpcUaUniversalTime(time).CompareTo(Utils.ToOpcUaUniversalTime((DateTime)value2))) == 0;
             }
 
             // check for compareable objects.
@@ -2054,9 +2207,7 @@ namespace Opc.Ua
 
             if (encodeable1 != null)
             {
-                IEncodeable encodeable2 = value2 as IEncodeable;
-
-                if (encodeable2 == null)
+                if (!(value2 is IEncodeable encodeable2))
                 {
                     return false;
                 }
@@ -2069,9 +2220,7 @@ namespace Opc.Ua
 
             if (element1 != null)
             {
-                XmlElement element2 = value2 as XmlElement;
-
-                if (element2 == null)
+                if (!(value2 is XmlElement element2))
                 {
                     return false;
                 }
@@ -2084,10 +2233,8 @@ namespace Opc.Ua
 
             if (array1 != null)
             {
-                Array array2 = value2 as Array;
-
                 // arrays are greater than non-arrays.
-                if (array2 == null)
+                if (!(value2 is Array array2))
                 {
                     return false;
                 }
@@ -2118,10 +2265,8 @@ namespace Opc.Ua
 
             if (enumerable1 != null)
             {
-                IEnumerable enumerable2 = value2 as IEnumerable;
-
                 // collections are greater than non-collections.
-                if (enumerable2 == null)
+                if (!(value2 is IEnumerable enumerable2))
                 {
                     return false;
                 }
@@ -2166,13 +2311,13 @@ namespace Opc.Ua
         public static bool Match(string target, string pattern, bool caseSensitive)
         {
             // an empty pattern always matches.
-            if (pattern == null || pattern.Length == 0)
+            if (string.IsNullOrEmpty(pattern))
             {
                 return true;
             }
 
             // an empty string never matches.
-            if (target == null || target.Length == 0)
+            if (string.IsNullOrEmpty(target))
             {
                 return false;
             }
@@ -2187,7 +2332,7 @@ namespace Opc.Ua
             }
             else
             {
-                if (String.Equals(target, pattern, StringComparison.InvariantCultureIgnoreCase))
+                if (String.Equals(target, pattern, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }
@@ -2382,7 +2527,7 @@ namespace Opc.Ua
 
             if (tIndex >= target.Length)
             {
-                return (pIndex >= pattern.Length); // if end of pattern true
+                return pIndex >= pattern.Length; // if end of pattern true
             }
 
             return true;
@@ -2450,7 +2595,7 @@ namespace Opc.Ua
                 }
 
                 // type found.
-                XmlReader reader = XmlReader.Create(new StringReader(element.OuterXml));
+                XmlReader reader = XmlReader.Create(new StringReader(element.OuterXml), Utils.DefaultXmlReaderSettings());
 
                 try
                 {
@@ -2459,7 +2604,7 @@ namespace Opc.Ua
                 }
                 catch (Exception ex)
                 {
-                    Utils.Trace("Exception parsing extension: " + ex.Message);
+                    Utils.LogError("Exception parsing extension: " + ex.Message);
                     throw;
                 }
                 finally
@@ -2621,7 +2766,7 @@ namespace Opc.Ua
         }
 
         /// <summary>
-        /// Returns the linker timestamp for an assembly. 
+        /// Returns the linker timestamp for an assembly.
         /// </summary>
         public static DateTime GetAssemblyTimestamp()
         {
@@ -2658,14 +2803,28 @@ namespace Opc.Ua
         /// <summary>
         /// Returns a XmlReaderSetting with safe defaults.
         /// DtdProcessing Prohibited, XmlResolver disabled and
-        /// ConformanceLevel Document. 
+        /// ConformanceLevel Document.
         /// </summary>
-        internal static XmlReaderSettings DefaultXmlReaderSettings()
+        public static XmlReaderSettings DefaultXmlReaderSettings()
         {
             return new XmlReaderSettings() {
                 DtdProcessing = DtdProcessing.Prohibit,
                 XmlResolver = null,
                 ConformanceLevel = ConformanceLevel.Document
+            };
+        }
+
+        /// <summary>
+        /// Returns a XmlWriterSetting with deterministic defaults across .NET versions.
+        /// </summary>
+        public static XmlWriterSettings DefaultXmlWriterSettings()
+        {
+            return new XmlWriterSettings() {
+                Encoding = Encoding.UTF8,
+                Indent = true,
+                ConformanceLevel = ConformanceLevel.Document,
+                IndentChars = "  ",
+                CloseOutput = false,
             };
         }
 
@@ -2786,7 +2945,7 @@ namespace Opc.Ua
         }
 
         /// <summary>
-        /// Cryptographic Nonce helper functions. 
+        /// Cryptographic Nonce helper functions.
         /// </summary>
         public static class Nonce
         {
@@ -2933,7 +3092,7 @@ namespace Opc.Ua
             }
 
             byte[] keySeed = hmac.ComputeHash(seed);
-            byte[] prfSeed = new byte[hmac.HashSize / 8 + seed.Length];
+            byte[] prfSeed = new byte[(hmac.HashSize / 8) + seed.Length];
             Array.Copy(keySeed, prfSeed, keySeed.Length);
             Array.Copy(seed, 0, prfSeed, keySeed.Length, seed.Length);
 
@@ -2996,7 +3155,7 @@ namespace Opc.Ua
         /// <summary>
         /// Lazy helper to allow runtime check for Mono.
         /// </summary>
-        private static readonly Lazy<bool> IsRunningOnMonoValue = new Lazy<bool>(() => {
+        private static readonly Lazy<bool> s_isRunningOnMonoValue = new Lazy<bool>(() => {
             return Type.GetType("Mono.Runtime") != null;
         });
 
@@ -3006,124 +3165,8 @@ namespace Opc.Ua
         /// <returns>true if running on Mono runtime</returns>
         public static bool IsRunningOnMono()
         {
-            return IsRunningOnMonoValue.Value;
+            return s_isRunningOnMonoValue.Value;
         }
-        #endregion
-    }
-
-    /// <summary>
-    /// Used as underlying tracing object for event processing.
-    /// </summary>
-    public class Tracing
-    {
-        #region Private Members
-        private static object m_syncRoot = new Object();
-        private static Tracing s_instance;
-        #endregion Private Members
-
-        #region Singleton Instance
-        /// <summary>
-        /// Private constructor.
-        /// </summary>
-        private Tracing()
-        { }
-
-        /// <summary>
-        /// Public Singleton Instance getter.
-        /// </summary>
-        public static Tracing Instance
-        {
-            get
-            {
-                if (s_instance == null)
-                {
-                    lock (m_syncRoot)
-                    {
-                        if (s_instance == null)
-                        {
-                            s_instance = new Tracing();
-                        }
-                    }
-                }
-                return s_instance;
-            }
-        }
-        #endregion Singleton Instance
-
-        #region Public Events
-        /// <summary>
-        /// Occurs when a trace call is made.
-        /// </summary>
-        public event EventHandler<TraceEventArgs> TraceEventHandler;
-        #endregion Public Events
-
-        #region Internal Members
-        internal void RaiseTraceEvent(TraceEventArgs eventArgs)
-        {
-            if (TraceEventHandler != null)
-            {
-                try
-                {
-                    TraceEventHandler(this, eventArgs);
-                }
-                catch (Exception ex)
-                {
-                    Utils.Trace(ex, "Exception invoking Trace Event Handler", true, null);
-                }
-            }
-        }
-        #endregion
-    }
-
-    /// <summary>
-    /// The event arguments provided when a trace event is raised.
-    /// </summary>
-    public class TraceEventArgs : EventArgs
-    {
-        #region Constructors
-        /// <summary>
-        /// Initializes a new instance of the TraceEventArgs class.
-        /// </summary>
-        /// <param name="traceMask">The trace mask.</param>
-        /// <param name="format">The format.</param>
-        /// <param name="message">The message.</param>
-        /// <param name="exception">The exception.</param>
-        /// <param name="args">The arguments.</param>
-        internal TraceEventArgs(int traceMask, string format, string message, Exception exception, object[] args)
-        {
-            TraceMask = traceMask;
-            Format = format;
-            Message = message;
-            Exception = exception;
-            Arguments = args;
-        }
-        #endregion Constructors
-
-        #region Public Properties
-        /// <summary>
-        /// Gets the trace mask.
-        /// </summary>
-        public int TraceMask { get; private set; }
-
-        /// <summary>
-        /// Gets the format.
-        /// </summary>
-        public string Format { get; private set; }
-
-        /// <summary>
-        /// Gets the arguments.
-        /// </summary>
-        public object[] Arguments { get; private set; }
-
-        /// <summary>
-        /// Gets the message.
-        /// </summary>
-        public string Message { get; private set; }
-
-        /// <summary>
-        /// Gets the exception.
-        /// </summary>
-        public Exception Exception { get; private set; }
-        #endregion Public Properties
+        #endregion 
     }
 }

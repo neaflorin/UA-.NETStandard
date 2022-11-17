@@ -149,14 +149,14 @@ namespace Opc.Ua.Client.ComplexTypes
         }
 
         /// <summary cref="IEncodeable.IsEqual(IEncodeable)" />
-        public virtual bool IsEqual(IEncodeable equalValue)
+        public virtual bool IsEqual(IEncodeable encodeable)
         {
-            if (Object.ReferenceEquals(this, equalValue))
+            if (Object.ReferenceEquals(this, encodeable))
             {
                 return true;
             }
 
-            if (!(equalValue is BaseComplexType valueBaseType))
+            if (!(encodeable is BaseComplexType valueBaseType))
             {
                 return false;
             }
@@ -192,7 +192,7 @@ namespace Opc.Ua.Client.ComplexTypes
         /// <param name="format">(Unused). Leave this as null</param>
         /// <param name="formatProvider">The provider of a mechanism for retrieving an object to control formatting.</param>
         /// <returns>
-        /// A <see cref="T:System.String"/> containing the value of the current embeded instance in the specified format.
+        /// A <see cref="System.String"/> containing the value of the current embeded instance in the specified format.
         /// </returns>
         /// <exception cref="FormatException">Thrown if the <i>format</i> parameter is not null</exception>
         public virtual string ToString(string format, IFormatProvider formatProvider)
@@ -278,7 +278,7 @@ namespace Opc.Ua.Client.ComplexTypes
         {
             if (body.Length == 0)
             {
-                body.Append("{");
+                body.Append('{');
             }
             else
             {
@@ -302,17 +302,17 @@ namespace Opc.Ua.Client.ComplexTypes
             {
                 bool first = true;
                 var enumerable = value as IEnumerable;
-                body.Append("[");
+                body.Append('[');
                 foreach (var item in enumerable)
                 {
                     if (!first)
                     {
-                        body.Append(",");
+                        body.Append(',');
                     }
                     AppendPropertyValue(formatProvider, body, item);
                     first = false;
                 }
-                body.Append("]");
+                body.Append(']');
             }
             else
             {
@@ -971,7 +971,7 @@ namespace Opc.Ua.Client.ComplexTypes
         #endregion Protected Fields
 
         #region Private Fields
-        private ServiceMessageContext m_context;
+        private IServiceMessageContext m_context;
         private StructureBaseDataType m_structureBaseType;
         private XmlQualifiedName m_xmlName;
         #endregion Private Fields

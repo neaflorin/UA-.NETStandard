@@ -1,6 +1,6 @@
-/* Copyright (c) 1996-2020 The OPC Foundation. All rights reserved.
+/* Copyright (c) 1996-2022 The OPC Foundation. All rights reserved.
    The source code in this file is covered under a dual-license scenario:
-     - RCL: for OPC Foundation members in good-standing
+     - RCL: for OPC Foundation Corporate Members in good-standing
      - GPL V2: everybody else
    RCL license terms accompanied with this source code. See http://opcfoundation.org/License/RCL/1.00/
    GNU General Public License as published by the Free Software Foundation;
@@ -208,7 +208,7 @@ namespace Opc.Ua
             // verify the input data is the correct block size.
             if (dataToEncrypt.Count % inputBlockSize != 0)
             {
-                Utils.Trace("Message is not an integral multiple of the block size. Length = {0}, BlockSize = {1}.", dataToEncrypt.Count, inputBlockSize);
+                Utils.LogError("Message is not an integral multiple of the block size. Length = {0}, BlockSize = {1}.", dataToEncrypt.Count, inputBlockSize);
             }
 
             byte[] encryptedBuffer = outputBuffer.Array;
@@ -219,7 +219,6 @@ namespace Opc.Ua
                 outputBuffer.Offset,
                 outputBuffer.Count))
             {
-
                 // encrypt body.
                 byte[] input = new byte[inputBlockSize];
 
@@ -295,7 +294,7 @@ namespace Opc.Ua
             // verify the input data is the correct block size.
             if (dataToDecrypt.Count % inputBlockSize != 0)
             {
-                Utils.Trace("Message is not an integral multiple of the block size. Length = {0}, BlockSize = {1}.", dataToDecrypt.Count, inputBlockSize);
+                Utils.LogError("Message is not an integral multiple of the block size. Length = {0}, BlockSize = {1}.", dataToDecrypt.Count, inputBlockSize);
             }
 
             byte[] decryptedBuffer = outputBuffer.Array;
@@ -306,7 +305,6 @@ namespace Opc.Ua
                 outputBuffer.Offset,
                 outputBuffer.Count))
             {
-
                 // decrypt body.
                 byte[] input = new byte[inputBlockSize];
                 for (int ii = dataToDecrypt.Offset; ii < dataToDecrypt.Offset + dataToDecrypt.Count; ii += inputBlockSize)
@@ -340,6 +338,7 @@ namespace Opc.Ua
                 return false;
             }
         }
+
         /// <summary>
         /// Lazy helper to allow runtime to check for Pss support.
         /// </summary>

@@ -1,6 +1,6 @@
-/* Copyright (c) 1996-2020 The OPC Foundation. All rights reserved.
+/* Copyright (c) 1996-2022 The OPC Foundation. All rights reserved.
    The source code in this file is covered under a dual-license scenario:
-     - RCL: for OPC Foundation members in good-standing
+     - RCL: for OPC Foundation Corporate Members in good-standing
      - GPL V2: everybody else
    RCL license terms accompanied with this source code. See http://opcfoundation.org/License/RCL/1.00/
    GNU General Public License as published by the Free Software Foundation;
@@ -28,7 +28,7 @@ namespace Opc.Ua
         /// <summary>
         /// Initializes the object with default values.
         /// </summary>
-        public XmlEncoder(ServiceMessageContext context)
+        public XmlEncoder(IServiceMessageContext context)
         {
             Initialize();
 
@@ -36,7 +36,7 @@ namespace Opc.Ua
             m_context = context;
             m_nestingLevel = 0;
 
-            XmlWriterSettings settings = new XmlWriterSettings();
+            XmlWriterSettings settings = Utils.DefaultXmlWriterSettings();
             settings.CheckCharacters = false;
             settings.ConformanceLevel = ConformanceLevel.Auto;
             settings.NamespaceHandling = NamespaceHandling.OmitDuplicates;
@@ -48,7 +48,7 @@ namespace Opc.Ua
         /// <summary>
         /// Initializes the object with a system type to encode and a XML writer.
         /// </summary>
-        public XmlEncoder(System.Type systemType, XmlWriter writer, ServiceMessageContext context)
+        public XmlEncoder(System.Type systemType, XmlWriter writer, IServiceMessageContext context)
         :
             this(EncodeableFactory.GetXmlName(systemType), writer, context)
         {
@@ -57,7 +57,7 @@ namespace Opc.Ua
         /// <summary>
         /// Initializes the object with a system type to encode and a XML writer.
         /// </summary>
-        public XmlEncoder(XmlQualifiedName root, XmlWriter writer, ServiceMessageContext context)
+        public XmlEncoder(XmlQualifiedName root, XmlWriter writer, IServiceMessageContext context)
         {
             Initialize();
 
@@ -261,7 +261,7 @@ namespace Opc.Ua
         /// <summary>
         /// The message context associated with the encoder.
         /// </summary>
-        public ServiceMessageContext Context => m_context;
+        public IServiceMessageContext Context => m_context;
 
         /// <summary>
         /// Xml Encoder always produces reversible encoding.
@@ -616,10 +616,7 @@ namespace Opc.Ua
             {
                 PushNamespace(Namespaces.OpcUaXsd);
 
-                if (value != null)
-                {
-                    WriteUInt32("Code", value.Code);
-                }
+                WriteUInt32("Code", value.Code);
 
                 PopNamespace();
 
@@ -1918,17 +1915,16 @@ namespace Opc.Ua
 
             // encode xml body.
             XmlElement xml = body as XmlElement;
-
             if (xml != null)
             {
-                XmlReader reader = XmlReader.Create(new StringReader(xml.OuterXml));
-                m_writer.WriteNode(reader, false);
-                reader.Dispose();
-                return;
+                using (XmlReader reader = XmlReader.Create(new StringReader(xml.OuterXml), Utils.DefaultXmlReaderSettings()))
+                {
+                    m_writer.WriteNode(reader, false);
+                    return;
+                }
             }
 
             IEncodeable encodeable = body as IEncodeable;
-
             if (encodeable == null)
             {
                 throw new ServiceResultException(
@@ -2203,7 +2199,7 @@ namespace Opc.Ua
         private XmlWriter m_writer;
         private Stack<string> m_namespaces;
         private XmlQualifiedName m_root;
-        private ServiceMessageContext m_context;
+        private IServiceMessageContext m_context;
         private ushort[] m_namespaceMappings;
         private ushort[] m_serverMappings;
         private uint m_nestingLevel;

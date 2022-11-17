@@ -1,6 +1,6 @@
-/* Copyright (c) 1996-2020 The OPC Foundation. All rights reserved.
+/* Copyright (c) 1996-2022 The OPC Foundation. All rights reserved.
    The source code in this file is covered under a dual-license scenario:
-     - RCL: for OPC Foundation members in good-standing
+     - RCL: for OPC Foundation Corporate Members in good-standing
      - GPL V2: everybody else
    RCL license terms accompanied with this source code. See http://opcfoundation.org/License/RCL/1.00/
    GNU General Public License as published by the Free Software Foundation;
@@ -130,7 +130,7 @@ namespace Opc.Ua
                     return m_uaBypassChannel.SupportedFeatures;
                 }
 
-                return TransportChannelFeatures.Reconnect | TransportChannelFeatures.BeginSendRequest | 
+                return TransportChannelFeatures.Reconnect | TransportChannelFeatures.BeginSendRequest |
                     TransportChannelFeatures.BeginClose | TransportChannelFeatures.SendRequestAsync;
             }
         }
@@ -180,7 +180,7 @@ namespace Opc.Ua
         /// <summary>
         /// Gets the context used when serializing messages exchanged via the channel.
         /// </summary>
-        public ServiceMessageContext MessageContext
+        public IServiceMessageContext MessageContext
         {
             get
             {
@@ -672,7 +672,7 @@ namespace Opc.Ua
             }
             catch (Exception e)
             {
-                Utils.Trace(e, "Unexpected error sending outgoing request.");
+                Utils.LogError(e, "Unexpected error sending outgoing request.");
             }
         }
 #endif
@@ -688,7 +688,7 @@ namespace Opc.Ua
             EndpointConfiguration endpointConfiguration,
             X509Certificate2 clientCertificate,
             X509Certificate2Collection clientCertificateChain,
-            ServiceMessageContext messageContext)
+            IServiceMessageContext messageContext)
         {
             // initialize the channel which will be created with the server.
             string uriScheme = new Uri(description.EndpointUrl).Scheme;
@@ -741,7 +741,7 @@ namespace Opc.Ua
             EndpointDescription description,
             EndpointConfiguration endpointConfiguration,
             X509Certificate2 clientCertificate,
-            ServiceMessageContext messageContext)
+            IServiceMessageContext messageContext)
         {
             return CreateUaBinaryChannel(configuration, description, endpointConfiguration, clientCertificate, null, messageContext);
         }
@@ -762,7 +762,7 @@ namespace Opc.Ua
             EndpointConfiguration endpointConfiguration,
             X509Certificate2 clientCertificate,
             X509Certificate2Collection clientCertificateChain,
-            ServiceMessageContext messageContext)
+            IServiceMessageContext messageContext)
         {
             string uriScheme = new Uri(description.EndpointUrl).Scheme;
 
@@ -785,7 +785,6 @@ namespace Opc.Ua
                     uriScheme = Utils.UriSchemeOpcWss;
                     break;
                 }
-
             }
 
             // initialize the channel which will be created with the server.
@@ -827,7 +826,7 @@ namespace Opc.Ua
 
         #region Private Fields
         internal TransportChannelSettings m_settings;
-        internal ServiceMessageContext m_messageContext;
+        internal IServiceMessageContext m_messageContext;
         internal ITransportChannel m_uaBypassChannel;
         internal int m_operationTimeout;
         internal IChannelBase m_channel;
@@ -909,7 +908,7 @@ namespace Opc.Ua
                 return;
             }
 
-            Utils.Trace("RECONNECT: Reconnecting to {0}.", m_settings.Description.EndpointUrl);
+            Utils.LogInfo("RECONNECT: Reconnecting to {0}.", m_settings.Description.EndpointUrl);
         }
 
         /// <inheritdoc/>
@@ -968,7 +967,7 @@ namespace Opc.Ua
                 }
                 catch (Exception e)
                 {
-                    Utils.Trace(e, "Unexpected exception invoking UaChannelAsyncResult callback function.");
+                    Utils.LogError(e, "Unexpected exception invoking UaChannelAsyncResult callback function.");
                 }
             }
 

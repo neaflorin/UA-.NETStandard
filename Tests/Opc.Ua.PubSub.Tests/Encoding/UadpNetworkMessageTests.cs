@@ -41,8 +41,8 @@ namespace Opc.Ua.PubSub.Tests.Encoding
     [TestFixture(Description = "Tests for Encoding/Decoding of UadpNetworkMessage objects")]
     public class UadpNetworkMessageTests
     {
-        private string PublisherConfigurationFileName = Path.Combine("Configuration", "PublisherConfiguration.xml");
-        private string SubscriberConfigurationFileName = Path.Combine("Configuration", "SubscriberConfiguration.xml");
+        private string m_publisherConfigurationFileName = Path.Combine("Configuration", "PublisherConfiguration.xml");
+        private string m_subscriberConfigurationFileName = Path.Combine("Configuration", "SubscriberConfiguration.xml");
 
         private PubSubConfigurationDataType m_publisherConfiguration;
         private UaPubSubApplication m_publisherApplication;
@@ -58,13 +58,13 @@ namespace Opc.Ua.PubSub.Tests.Encoding
         public const ushort NamespaceIndexAllTypes = 3;
         public const ushort NamespaceIndexMassTest = 4;
 
-        private const uint NetworkMessageContentMask = 0x3ff;
+        private const uint kNetworkMessageContentMask = 0x3ff;
 
         [OneTimeSetUp()]
         public void MyTestInitialize()
         {
             // Create a publisher application
-            string publisherConfigurationFile = Utils.GetAbsoluteFilePath(PublisherConfigurationFileName, true, true, false);
+            string publisherConfigurationFile = Utils.GetAbsoluteFilePath(m_publisherConfigurationFileName, true, true, false);
             m_publisherApplication = UaPubSubApplication.Create(publisherConfigurationFile);
             Assert.IsNotNull(m_publisherApplication, "m_publisherApplication shall not be null");
 
@@ -84,7 +84,7 @@ namespace Opc.Ua.PubSub.Tests.Encoding
             Assert.IsNotNull(m_firstWriterGroup, "m_firstWriterGroup should not be null");
 
             // Create a subscriber application
-            string subscriberConfigurationFile = Utils.GetAbsoluteFilePath(SubscriberConfigurationFileName, true, true, false);
+            string subscriberConfigurationFile = Utils.GetAbsoluteFilePath(m_subscriberConfigurationFileName, true, true, false);
             m_subscriberApplication = UaPubSubApplication.Create(subscriberConfigurationFile);
             Assert.IsNotNull(m_subscriberApplication, "m_subscriberApplication should not be null");
 
@@ -531,7 +531,11 @@ namespace Opc.Ua.PubSub.Tests.Encoding
                 dataSetWriter.DataSetFieldContentMask = (uint)dataSetFieldContentMask;
             }            
 
-            var networkMessages = m_firstPublisherConnection.CreateNetworkMessages(m_firstWriterGroup);
+            var networkMessages = m_firstPublisherConnection.CreateNetworkMessages(m_firstWriterGroup, new WriterGroupPublishState());
+            // filter out the metadata message
+            networkMessages = (from m in networkMessages
+                               where !m.IsMetaDataMessage
+                               select m).ToList();
             Assert.IsNotNull(networkMessages, "connection.CreateNetworkMessages shall not return null");
             Assert.AreEqual(1, networkMessages.Count, "connection.CreateNetworkMessages shall return only one network message");
 
@@ -549,10 +553,10 @@ namespace Opc.Ua.PubSub.Tests.Encoding
         /// <param name="uadpNetworkMessageDecoded"></param>
         private void CompareEncodeDecode(UadpNetworkMessage uadpNetworkMessage)
         {
-            byte[] bytes = uadpNetworkMessage.Encode();
+            byte[] bytes = uadpNetworkMessage.Encode(ServiceMessageContext.GlobalContext);
 
             UadpNetworkMessage uaNetworkMessageDecoded = new UadpNetworkMessage();
-            uaNetworkMessageDecoded.Decode(bytes, m_firstDataSetReadersType);            
+            uaNetworkMessageDecoded.Decode(new ServiceMessageContext(), bytes, m_firstDataSetReadersType);            
 
             // compare uaNetworkMessage with uaNetworkMessageDecoded
             Compare(uadpNetworkMessage, uaNetworkMessageDecoded);
@@ -565,10 +569,10 @@ namespace Opc.Ua.PubSub.Tests.Encoding
         /// <param name="uadpNetworkMessageDecoded"></param>
         private void InvalidCompareEncodeDecode(UadpNetworkMessage uadpNetworkMessage)
         {
-            byte[] bytes = uadpNetworkMessage.Encode();
+            byte[] bytes = uadpNetworkMessage.Encode(ServiceMessageContext.GlobalContext);
 
             UadpNetworkMessage uaNetworkMessageDecoded = new UadpNetworkMessage();
-            uaNetworkMessageDecoded.Decode(bytes, m_firstDataSetReadersType);
+            uaNetworkMessageDecoded.Decode(new ServiceMessageContext(), bytes, m_firstDataSetReadersType);
 
             // compare uaNetworkMessage with uaNetworkMessageDecoded
             // TODO Fix: this might be broken after refactor
