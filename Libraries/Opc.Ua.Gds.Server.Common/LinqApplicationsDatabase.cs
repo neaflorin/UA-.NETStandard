@@ -36,7 +36,7 @@ using Newtonsoft.Json;
 namespace Opc.Ua.Gds.Server.Database.Linq
 {
     [Serializable]
-    class ApplicationName
+    public class ApplicationName
     {
         public Guid ApplicationId { get; set; }
         public string Locale { get; set; }
@@ -44,7 +44,7 @@ namespace Opc.Ua.Gds.Server.Database.Linq
     }
 
     [Serializable]
-    class Application
+    public class Application
     {
         public Application()
         {
@@ -63,7 +63,7 @@ namespace Opc.Ua.Gds.Server.Database.Linq
     }
 
     [Serializable]
-    class CertificateRequest
+    public class CertificateRequest
     {
         public Guid RequestId { get; set; }
         public Guid ApplicationId { get; set; }
@@ -92,7 +92,7 @@ namespace Opc.Ua.Gds.Server.Database.Linq
     }
 
     [Serializable]
-    class ServerEndpoint
+    public class ServerEndpoint
     {
         public Guid ApplicationId { get; set; }
         public string DiscoveryUrl { get; set; }

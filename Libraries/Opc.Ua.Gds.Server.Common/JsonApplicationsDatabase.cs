@@ -48,6 +48,14 @@ namespace Opc.Ua.Gds.Server.Database.Linq
         public JsonApplicationsDatabase(string fileName)
         {
             m_fileName = fileName;
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                string directory = Path.GetDirectoryName(fileName);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+            }
         }
 
         /// <summary>

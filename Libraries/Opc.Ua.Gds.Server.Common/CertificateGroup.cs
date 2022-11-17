@@ -319,7 +319,8 @@ namespace Opc.Ua.Gds.Server
         /// </summary>
         public virtual async Task<X509Certificate2> LoadSigningKeyAsync(X509Certificate2 signingCertificate, string signingKeyPassword)
         {
-            CertificateIdentifier certIdentifier = new CertificateIdentifier(signingCertificate) {
+            CertificateIdentifier certIdentifier = new CertificateIdentifier(signingCertificate) 
+			{
                 StorePath = AuthoritiesStorePath,
                 StoreType = AuthoritiesStoreType
             };
@@ -381,7 +382,8 @@ namespace Opc.Ua.Gds.Server
                     throw new ServiceResultException(StatusCodes.BadCertificateInvalid, "Cannot find issuer certificate in store.");
                 }
 
-                CertificateIdentifier certCAIdentifier = new CertificateIdentifier(certCA) {
+                CertificateIdentifier certCAIdentifier = new CertificateIdentifier(certCA) 
+				{
                     StorePath = storePath,
                     StoreType = CertificateStoreIdentifier.DetermineStoreType(storePath)
                 };
